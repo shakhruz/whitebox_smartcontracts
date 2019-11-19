@@ -1,4 +1,5 @@
 wallet_password.pwd
+kylin.sh
 node_modules/
 **/node_modules/
 **/dist/
