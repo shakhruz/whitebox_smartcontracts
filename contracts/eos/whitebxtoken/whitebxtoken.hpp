@@ -67,7 +67,8 @@ struct withdraw_args
 [[eosio::action]] void create(name issuer, asset maximum_supply);
 [[eosio::action]] void issue(issue_args payload);
 [[eosio::action]] void withdraw(withdraw_args payload);
-[[eosio::action]] void transfer(vtransfer_args payload);
+[[eosio::action]] void vtransfer(vtransfer_args payload);
+[[eosio::action]] void transfer(name from, name to, asset quantity, string memo);
 
 inline asset get_supply(symbol_code sym) const;
 inline asset get_balance(name owner, symbol_code sym) const;
@@ -112,9 +113,12 @@ void add_balance(name owner, asset value, name ram_payer);
 void sub_cold_balance(name owner, asset value);
 void add_cold_balance(name owner, asset value, name ram_payer);
 
-VACCOUNTS_APPLY(((issue_args)(issue))((withdraw_args)(withdraw))((vtransfer_args)(transfer)))
+VACCOUNTS_APPLY(((issue_args)(issue))((withdraw_args)(withdraw))((vtransfer_args)(vtransfer)))
 
-CONTRACT_END((create)(issue)(transfer)(withdraw)(regaccount)(xdcommit)(xvinit))
+// CONTRACT_END((create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
+}
+;
+EOSIO_DISPATCH_SVC_TRX(whitebxtoken, (create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
 
 asset whitebxtoken::get_supply(symbol_code sym) const
 {

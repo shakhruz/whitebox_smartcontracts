@@ -52,19 +52,15 @@ using namespace eosio;
     add_cold_balance(payload.to, payload.quantity, st.issuer);
 };
 
-[[eosio::action]] void whitebxtoken::transfer(vtransfer_args payload) // name from, name to, asset quantity, string memo
+[[eosio::action]] void whitebxtoken::vtransfer(vtransfer_args payload) // name from, name to, asset quantity, string memo
 {
     eosio::check(payload.from != payload.to, "cannot transfer to self");
 
     require_vaccount(payload.from);
-    //require_auth(from);
     eosio::check(is_account(payload.to), "to account does not exist");
     auto sym = payload.quantity.symbol.code().raw();
     stats statstable(_self, sym);
     const auto &st = statstable.get(sym);
-
-    // require_recipient(payload.from);
-    // require_recipient(payload.to);
 
     eosio::check(payload.quantity.is_valid(), "invalid quantity");
     eosio::check(payload.quantity.amount > 0, "must transfer positive quantity");
@@ -73,6 +69,37 @@ using namespace eosio;
 
     sub_cold_balance(payload.from, payload.quantity);
     add_cold_balance(payload.to, payload.quantity, payload.from);
+};
+
+[[eosio::action]] void whitebxtoken::transfer(name from, name to, asset quantity, string memo) {
+    require_auth(from);
+    if (to != _self || from == _self || from == "eosio"_n || from == "eosio.stake"_n || from == to)
+        return;
+    if (memo == "seed transfer")
+        return;
+    if (memo.size() > 0)
+    {
+        name to_act = name(memo.c_str());
+        // eosio::check(is_account(to_act), "The account name supplied is not valid");
+
+        auto sym = quantity.symbol;
+        auto sym_name = name("MEOS");
+        eosio::check(sym.code().raw() == name("EOS").value, "only EOS deposit is supported");
+
+        stats statstable(_self, sym_name.value);
+        auto existing = statstable.find(sym_name.value);
+        eosio::check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
+        const auto &st = *existing;
+
+        eosio::check(quantity.is_valid(), "invalid quantity");
+        eosio::check(quantity.amount > 0, "must issue positive quantity");
+
+        statstable.modify(st, eosio::same_payer, [&](auto &s) {
+            s.supply += quantity * 1000;
+        });
+
+        add_balance(to_act, quantity * 1000, from);
+    }
 };
 
 [[eosio::action]] void whitebxtoken::withdraw(withdraw_args payload) // name to, asset quantity
@@ -165,3 +192,15 @@ void whitebxtoken::sub_cold_balance(name owner, asset value)
         });
     }
 }
+
+// extern "C"
+// {
+//     void apply(uint64_t receiver, uint64_t code, uint64_t action)
+//     {
+//         whitebxtoken _whitebxtoken(receiver);
+//         if (code == name("eosio.token").value && action == name("transfer").value)
+//         {
+//             execute_action(name(receiver), name(code), &addressbook::transferext);
+//         }
+//     }
+// };
