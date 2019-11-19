@@ -26,10 +26,11 @@ using namespace eosio;
     });
 };
 
-[[eosio::action]] void whitebxtoken::issue(name to, asset quantity, string memo) {
-    auto sym = quantity.symbol;
+[[eosio::action]] void whitebxtoken::issue(issue_args payload) // name to, asset quantity, string memo
+{
+    auto sym = payload.quantity.symbol;
     eosio::check(sym.is_valid(), "invalid symbol name");
-    eosio::check(memo.size() <= 256, "memo has more than 256 bytes");
+    eosio::check(payload.memo.size() <= 256, "memo has more than 256 bytes");
 
     auto sym_name = sym.code().raw();
     stats statstable(_self, sym_name);
@@ -38,99 +39,61 @@ using namespace eosio;
     const auto &st = *existing;
 
     require_auth(st.issuer);
-    eosio::check(quantity.is_valid(), "invalid quantity");
-    eosio::check(quantity.amount > 0, "must issue positive quantity");
+    eosio::check(payload.quantity.is_valid(), "invalid quantity");
+    eosio::check(payload.quantity.amount > 0, "must issue positive quantity");
 
-    eosio::check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-    eosio::check(quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
-
-    statstable.modify(st, eosio::same_payer, [&](auto &s) {
-        s.supply += quantity;
-    });
-
-    add_balance(st.issuer, quantity, st.issuer);
-
-    if (to != st.issuer)
-    {
-        SEND_INLINE_ACTION(*this, transfer, {st.issuer, "active"_n}, {st.issuer, to, quantity, memo});
-    }
-};
-
-[[eosio::action]] void whitebxtoken::coldissue(name to, asset quantity, string memo) {
-    auto sym = quantity.symbol;
-    eosio::check(sym.is_valid(), "invalid symbol name");
-    eosio::check(memo.size() <= 256, "memo has more than 256 bytes");
-
-    auto sym_name = sym.code().raw();
-    stats statstable(_self, sym_name);
-    auto existing = statstable.find(sym_name);
-    eosio::check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
-    const auto &st = *existing;
-
-    require_auth(st.issuer);
-    eosio::check(quantity.is_valid(), "invalid quantity");
-    eosio::check(quantity.amount > 0, "must issue positive quantity");
-
-    eosio::check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-    eosio::check(quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
+    eosio::check(payload.quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+    eosio::check(payload.quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
 
     statstable.modify(st, eosio::same_payer, [&](auto &s) {
-        s.supply += quantity;
+        s.supply += payload.quantity;
     });
 
-    add_cold_balance(to, quantity, st.issuer);
+    add_cold_balance(payload.to, payload.quantity, st.issuer);
 };
 
-[[eosio::action]] void whitebxtoken::transfer(name from, name to, asset quantity, string memo) {
-    eosio::check(from != to, "cannot transfer to self");
-    require_auth(from);
-    eosio::check(is_account(to), "to account does not exist");
-    auto sym = quantity.symbol.code().raw();
+[[eosio::action]] void whitebxtoken::transfer(vtransfer_args payload) // name from, name to, asset quantity, string memo
+{
+    eosio::check(payload.from != payload.to, "cannot transfer to self");
+
+    require_vaccount(payload.from);
+    //require_auth(from);
+    eosio::check(is_account(payload.to), "to account does not exist");
+    auto sym = payload.quantity.symbol.code().raw();
     stats statstable(_self, sym);
     const auto &st = statstable.get(sym);
 
-    require_recipient(from);
-    require_recipient(to);
+    // require_recipient(payload.from);
+    // require_recipient(payload.to);
 
-    eosio::check(quantity.is_valid(), "invalid quantity");
-    eosio::check(quantity.amount > 0, "must transfer positive quantity");
-    eosio::check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-    eosio::check(memo.size() <= 256, "memo has more than 256 bytes");
+    eosio::check(payload.quantity.is_valid(), "invalid quantity");
+    eosio::check(payload.quantity.amount > 0, "must transfer positive quantity");
+    eosio::check(payload.quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+    eosio::check(payload.memo.size() <= 256, "memo has more than 256 bytes");
 
-    sub_balance(from, quantity);
-    add_balance(to, quantity, from);
+    sub_cold_balance(payload.from, payload.quantity);
+    add_cold_balance(payload.to, payload.quantity, payload.from);
 };
 
-[[eosio::action]] void whitebxtoken::store(name from, asset quantity) {
-    require_auth(from);
-    auto sym = quantity.symbol.code().raw();
+[[eosio::action]] void whitebxtoken::withdraw(withdraw_args payload) // name to, asset quantity
+{
+    require_vaccount(payload.from);
+    // require_auth(to);
+
+    auto sym = payload.quantity.symbol.code().raw();
     stats statstable(_self, sym);
     const auto &st = statstable.get(sym);
 
-    require_recipient(from);
+    // require_recipient(payload.to);
 
-    eosio::check(quantity.is_valid(), "invalid quantity");
-    eosio::check(quantity.amount > 0, "must store positive quantity");
-    eosio::check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
+    eosio::check(payload.quantity.is_valid(), "invalid quantity");
+    eosio::check(payload.quantity.amount > 0, "must withdraw positive quantity");
+    eosio::check(payload.quantity.symbol == st.supply.symbol, "symbol precision mismatch");
 
-    sub_balance(from, quantity);
-    add_cold_balance(from, quantity, from);
-};
-
-[[eosio::action]] void whitebxtoken::withdraw(name to, asset quantity) {
-    require_auth(to);
-    auto sym = quantity.symbol.code().raw();
-    stats statstable(_self, sym);
-    const auto &st = statstable.get(sym);
-
-    require_recipient(to);
-
-    eosio::check(quantity.is_valid(), "invalid quantity");
-    eosio::check(quantity.amount > 0, "must withdraw positive quantity");
-    eosio::check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-
-    sub_cold_balance(to, quantity);
-    add_balance(to, quantity, to);
+    sub_cold_balance(payload.from, payload.quantity);
+    statstable.modify(st, eosio::same_payer, [&](auto &s) {
+        s.supply -= payload.quantity;
+    });
 };
 
 void whitebxtoken::add_balance(name owner, asset value, name ram_payer)
@@ -184,7 +147,7 @@ void whitebxtoken::add_cold_balance(name owner, asset value, name ram_payer)
             a.balance += value;
         });
     }
-}
+};
 
 void whitebxtoken::sub_cold_balance(name owner, asset value)
 {

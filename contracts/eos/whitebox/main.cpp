@@ -20,8 +20,8 @@ TABLE stat
 {
     uint64_t counter = 0;
 };
-
 typedef eosio::singleton<"stat"_n, stat> stats_def;
+
 TABLE account
 {
     extended_asset balance;
