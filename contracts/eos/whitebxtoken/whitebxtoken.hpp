@@ -30,6 +30,7 @@
 
 #define CONTRACT_NAME() whitebxtoken
 #define MEOS_SYM symbol(name("MEOS"))
+#define EOS_TOKEN_CONTRACT name("eosio.token")
 
 namespace eosiosystem
 {
@@ -65,9 +66,10 @@ struct issue_args
 struct withdraw_args
 {
     name from;
+    name to;
     asset quantity;
 
-    EOSLIB_SERIALIZE(withdraw_args, (from)(quantity))
+    EOSLIB_SERIALIZE(withdraw_args, (from)(to)(quantity))
 };
 
 [[eosio::action]] void create(name issuer, asset maximum_supply);

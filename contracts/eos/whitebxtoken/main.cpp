@@ -57,7 +57,7 @@ using namespace eosio;
     eosio::check(payload.from != payload.to, "cannot transfer to self");
 
     require_vaccount(payload.from);
-    eosio::check(is_account(payload.to), "to account does not exist");
+    // eosio::check(is_account(payload.to), "to account does not exist");
     auto sym = payload.quantity.symbol.code().raw();
     stats statstable(_self, sym);
     const auto &st = statstable.get(sym);
@@ -114,16 +114,25 @@ using namespace eosio;
     stats statstable(_self, sym);
     const auto &st = statstable.get(sym);
 
-    // require_recipient(payload.to);
+    eosio::check(is_account(payload.to), "The account name supplied is not valid");
 
     eosio::check(payload.quantity.is_valid(), "invalid quantity");
     eosio::check(payload.quantity.amount > 0, "must withdraw positive quantity");
     eosio::check(payload.quantity.symbol == st.supply.symbol, "symbol precision mismatch");
 
+    require_recipient(payload.to);
+
     sub_cold_balance(payload.from, payload.quantity);
     statstable.modify(st, eosio::same_payer, [&](auto &s) {
         s.supply -= payload.quantity;
     });
+
+    eosio::symbol eos_sym("EOS", 4);
+    asset eos_qty(payload.quantity.amount / 1000, eos_sym);
+
+    action(permission_level{_self, "active"_n}, EOS_TOKEN_CONTRACT, "transfer"_n,
+           std::make_tuple(_self, payload.to, eos_qty, std::string("withdraw")))
+        .send();
 };
 
 void whitebxtoken::add_balance(name owner, asset value, name ram_payer)
