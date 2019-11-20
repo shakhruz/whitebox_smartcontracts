@@ -13,19 +13,23 @@
 #include "../dappservices/plist.hpp"
 #include "../dappservices/plisttree.hpp"
 #include "../dappservices/multi_index.hpp"
+#include "../dappservices/cron.hpp"
 
-#define DAPPSERVICES_ACTIONS() \
-    XSIGNAL_DAPPSERVICE_ACTION \
-    LOG_DAPPSERVICE_ACTIONS    \
-    IPFS_DAPPSERVICE_ACTIONS   \
-    VACCOUNTS_DAPPSERVICE_ACTIONS
+#define DAPPSERVICES_ACTIONS()    \
+    XSIGNAL_DAPPSERVICE_ACTION    \
+    LOG_DAPPSERVICE_ACTIONS       \
+    IPFS_DAPPSERVICE_ACTIONS      \
+    VACCOUNTS_DAPPSERVICE_ACTIONS \
+    CRON_DAPPSERVICE_ACTIONS
 
 #define DAPPSERVICE_ACTIONS_COMMANDS() \
     IPFS_SVC_COMMANDS()                \
     LOG_SVC_COMMANDS()                 \
-    VACCOUNTS_SVC_COMMANDS()
+    VACCOUNTS_SVC_COMMANDS()           \
+    CRON_SVC_COMMANDS()
 
 #define CONTRACT_NAME() whitebxtoken
+#define MEOS_SYM symbol(name("MEOS"))
 
 namespace eosiosystem
 {
@@ -35,6 +39,8 @@ class system_contract;
 using std::string;
 
 CONTRACT_START()
+
+bool timer_callback(name timer, std::vector<char> payload, uint32_t seconds);
 
 public:
 struct vtransfer_args
@@ -118,7 +124,7 @@ VACCOUNTS_APPLY(((issue_args)(issue))((withdraw_args)(withdraw))((vtransfer_args
 // CONTRACT_END((create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
 }
 ;
-EOSIO_DISPATCH_SVC_TRX(whitebxtoken, (create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
+EOSIO_DISPATCH_SVC_TRX(CONTRACT_NAME(), (create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
 
 asset whitebxtoken::get_supply(symbol_code sym) const
 {

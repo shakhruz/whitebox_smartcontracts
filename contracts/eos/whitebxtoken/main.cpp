@@ -83,22 +83,25 @@ using namespace eosio;
         // eosio::check(is_account(to_act), "The account name supplied is not valid");
 
         auto sym = quantity.symbol;
-        auto sym_name = name("MEOS");
-        eosio::check(sym.code().raw() == name("EOS").value, "only EOS deposit is supported");
+        eosio::symbol sym_name("MEOS", 4);
+        eosio::symbol eos_symbol("EOS", 4);
+        eosio::check(quantity.symbol == eos_symbol, "only EOS deposit is supported");
 
-        stats statstable(_self, sym_name.value);
-        auto existing = statstable.find(sym_name.value);
+        stats statstable(_self, sym_name.code().raw());
+        auto existing = statstable.find(sym_name.code().raw());
         eosio::check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
         const auto &st = *existing;
 
         eosio::check(quantity.is_valid(), "invalid quantity");
         eosio::check(quantity.amount > 0, "must issue positive quantity");
 
-        statstable.modify(st, eosio::same_payer, [&](auto &s) {
-            s.supply += quantity * 1000;
-        });
+        asset meos_qty(quantity.amount * 1000, sym_name);
 
-        add_balance(to_act, quantity * 1000, from);
+        add_balance(to_act, meos_qty, _self);
+
+        // schedule moving these tokens to RAM and changing supply
+        std::vector<char> payload(memo.begin(), memo.end());
+        schedule_timer(_self, payload, 1);
     }
 };
 
@@ -191,16 +194,28 @@ void whitebxtoken::sub_cold_balance(name owner, asset value)
             a.balance -= value;
         });
     }
-}
+};
 
-// extern "C"
-// {
-//     void apply(uint64_t receiver, uint64_t code, uint64_t action)
-//     {
-//         whitebxtoken _whitebxtoken(receiver);
-//         if (code == name("eosio.token").value && action == name("transfer").value)
-//         {
-//             execute_action(name(receiver), name(code), &addressbook::transferext);
-//         }
-//     }
-// };
+bool whitebxtoken::timer_callback(name timer, std::vector<char> payload, uint32_t seconds)
+{
+    string account_name(payload.begin(), payload.end());
+    name to_act = name(account_name.c_str());
+
+    accounts_t to_acnts(_self, to_act.value);
+    eosio::symbol sym_name("MEOS", 4);
+    const auto &to = to_acnts.get(sym_name.code().raw(), "no balance object found");
+
+    stats statstable(_self, sym_name.code().raw());
+    auto existing = statstable.find(sym_name.code().raw());
+    eosio::check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
+    const auto &st = *existing;
+
+    statstable.modify(st, eosio::same_payer, [&](auto &s) {
+        s.supply += to.balance;
+    });
+
+    add_cold_balance(to_act, to.balance, to_act);
+    sub_balance(to_act, to.balance);
+
+    return false;
+};
