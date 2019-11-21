@@ -7,6 +7,17 @@
 
 using namespace eosio;
 
+// [[eosio::action]] void meostoken::erasetoken(asset token) {
+//     require_auth(_self);
+
+//     auto sym = token.symbol;
+//     eosio::check(sym.is_valid(), "invalid symbol name");
+
+//     stats statstable(_self, sym.code().raw());
+//     const auto &tk = statstable.get(sym.code().raw(), "token not found");
+//     statstable.erase(tk);
+// };
+
 [[eosio::action]] void meostoken::create(name issuer, asset maximum_supply) {
     require_auth(_self);
 
@@ -83,7 +94,7 @@ using namespace eosio;
         // eosio::check(is_account(to_act), "The account name supplied is not valid");
 
         auto sym = quantity.symbol;
-        eosio::symbol sym_name("MEOS", 4);
+        eosio::symbol sym_name("MEOS", 0);
         eosio::symbol eos_symbol("EOS", 4);
         eosio::check(quantity.symbol == eos_symbol, "only EOS deposit is supported");
 
@@ -95,7 +106,7 @@ using namespace eosio;
         eosio::check(quantity.is_valid(), "invalid quantity");
         eosio::check(quantity.amount > 0, "must issue positive quantity");
 
-        asset meos_qty(quantity.amount * 1000, sym_name);
+        asset meos_qty(quantity.amount * RATIO, sym_name);
 
         add_balance(to_act, meos_qty, _self);
 
@@ -128,7 +139,7 @@ using namespace eosio;
     });
 
     eosio::symbol eos_sym("EOS", 4);
-    asset eos_qty(payload.quantity.amount / 1000, eos_sym);
+    asset eos_qty(payload.quantity.amount / RATIO, eos_sym);
 
     action(permission_level{_self, "active"_n}, EOS_TOKEN_CONTRACT, "transfer"_n,
            std::make_tuple(_self, payload.to, eos_qty, std::string("withdraw")))

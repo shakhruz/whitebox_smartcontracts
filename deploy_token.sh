@@ -12,3 +12,5 @@ cleos wallet unlock --password <./wallet_password.pwd
 # deploy contract
 cleos -u $EOS_ENDPOINT set contract $ACCOUNT ./contracts/eos/meostoken -p $ACCOUNT@active
 
+# cleos -u $DSP_ENDPOINT push action $ACCOUNT erasetoken "[\"1.0000 MEOS\"]" -p $ACCOUNT
+# cleos -u $DSP_ENDPOINT push action $ACCOUNT create "{\"issuer\":\"meoswalletxx\", \"maximum_supply\":\"1000000000000 MEOS\"}" -p $ACCOUNT

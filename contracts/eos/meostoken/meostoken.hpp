@@ -31,6 +31,7 @@
 #define CONTRACT_NAME() meostoken
 #define MEOS_SYM symbol(name("MEOS"))
 #define EOS_TOKEN_CONTRACT name("eosio.token")
+#define RATIO 10000
 
 namespace eosiosystem
 {
@@ -77,7 +78,7 @@ struct withdraw_args
 [[eosio::action]] void withdraw(withdraw_args payload);
 [[eosio::action]] void vtransfer(vtransfer_args payload);
 [[eosio::action]] void transfer(name from, name to, asset quantity, string memo);
-
+// [[eosio::action]] void erasetoken(asset token);
 inline asset get_supply(symbol_code sym) const;
 inline asset get_balance(name owner, symbol_code sym) const;
 
@@ -126,6 +127,7 @@ VACCOUNTS_APPLY(((issue_args)(issue))((withdraw_args)(withdraw))((vtransfer_args
 // CONTRACT_END((create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
 }
 ;
+// EOSIO_DISPATCH_SVC_TRX(CONTRACT_NAME(), (erasetoken)(create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
 EOSIO_DISPATCH_SVC_TRX(CONTRACT_NAME(), (create)(issue)(vtransfer)(withdraw)(regaccount)(xdcommit)(xvinit))
 
 asset meostoken::get_supply(symbol_code sym) const
