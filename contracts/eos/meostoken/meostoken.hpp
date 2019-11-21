@@ -31,7 +31,7 @@
 #define CONTRACT_NAME() meostoken
 #define MEOS_SYM symbol(name("MEOS"))
 #define EOS_TOKEN_CONTRACT name("eosio.token")
-#define RATIO 10000
+#define RATIO 1
 
 namespace eosiosystem
 {
