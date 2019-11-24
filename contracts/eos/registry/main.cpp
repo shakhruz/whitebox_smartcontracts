@@ -53,11 +53,11 @@ typedef eosio::multi_index<"vitems"_n, shardbucket> cold_items_t_abi;
             a.schema_name = new_item.schema_name;
         });
     }
-}
+};
 
-    [[eosio::action]] void warmupitem(name owner, item new_item)
-{
+[[eosio::action]] void warmupitem(name owner, item new_item) {
     cold_items_t items(_self, owner.value);
     auto existing = items.find(new_item.item_name.value);
 }
+
 CONTRACT_END((regitem)(warmupitem))

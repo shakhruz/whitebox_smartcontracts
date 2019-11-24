@@ -1,5 +1,8 @@
 wallet_password.pwd
 kylin.sh
+keys.json
+meosratesuzs_keys.json
+
 node_modules/
 **/node_modules/
 **/dist/
