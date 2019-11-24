@@ -78,12 +78,10 @@ CONTRACT_END((getrate)(xdcommit)(regaccount)(xvinit))
 
 [[eosio::action]] void pricesoracle::getrate(getrate_struct payload)
 {
-  // require_auth(get_self());
-  // require_vaccount(payload.vaccount);
-
   string res;
-  // std::vector<char> url(payload.uri.begin(), payload.uri.end());
-  getURI(payload.uri, [&](auto &results) {
+  string path = "https+json://23.cb_price/nbu.uz/exchange-rates/json/";
+  std::vector<char> url(path.begin(), path.end());
+  getURI(url, [&](auto &results) {
     res = string(results[0].result.begin(), results[0].result.end());
     return results[0].result;
   });
@@ -94,7 +92,6 @@ CONTRACT_END((getrate)(xdcommit)(regaccount)(xvinit))
     p.timestamp = eosio::current_block_time();
     p.vaccount = payload.vaccount;
     p.sym = payload.sym;
-    // p.uri = url;
     p.price = res;
   });
 };
@@ -103,3 +100,9 @@ bool pricesoracle::timer_callback(name timer, std::vector<char> payload, uint32_
 {
   return false;
 };
+
+// require_auth(get_self());
+// require_vaccount(payload.vaccount);
+
+// std::vector<char> url(payload.uri.begin(), payload.uri.end());
+// p.uri = url;
