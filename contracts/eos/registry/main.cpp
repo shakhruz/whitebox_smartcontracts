@@ -18,12 +18,31 @@ using std::string;
 
 CONTRACT_START()
 
+public:
+struct regitem_args
+{
+    name vaccount;
+    std::vector<char> content;
+    string hash;
+
+    EOSLIB_SERIALIZE(regitem_args, (vaccount)(content)(hash))
+};
+
+struct clear_args
+{
+    uint64_t prim_key;
+    name vaccount;
+
+    EOSLIB_SERIALIZE(clear_args, (prim_key)(vaccount))
+};
+
+// private:
 TABLE item
 {
     uint64_t prim_key;
     name vaccount;
     std::vector<char> content;
-    checksum256 file_hash;
+    string hash;
     uint64_t primary_key() const { return prim_key; }
 };
 
@@ -37,33 +56,32 @@ TABLE shardbucket
 };
 typedef eosio::multi_index<"vitems"_n, shardbucket> cold_items_t_abi;
 
-ACTION regitem(item new_item)
+public:
+ACTION save(regitem_args payload)
 {
     // require_auth(owner);
-    require_vaccount(new_item.vaccount);
+    require_vaccount(payload.vaccount);
 
     cold_items_t items(_self, _self.value);
     items.emplace(_self, [&](auto &a) {
         a.prim_key = items.available_primary_key();
-        a.vaccount = new_item.vaccount;
-        a.content = new_item.content;
-        a.file_hash = new_item.file_hash;
+        a.vaccount = payload.vaccount;
+        a.content = payload.content;
+        a.hash = payload.hash;
     });
 };
 
-ACTION warmupitem(name owner, uint64_t prim_key)
+ACTION clear(clear_args payload)
 {
-    cold_items_t items(_self, prim_key);
-    auto existing = items.find(prim_key);
+    require_vaccount(payload.vaccount);
+    // require_auth(get_self());
+
+    cold_items_t items(get_self(), get_self().value);
+    const auto &item = items.get(payload.prim_key, "item with key not found");
+    items.erase(item);
 }
 
-// ACTION clear() {
-//     require_auth(_self);
+VACCOUNTS_APPLY(((regitem_args)(save))((clear_args)(clear)))
 
-//     cold_items_t items(_self, _self);
-// };
-
-VACCOUNTS_APPLY(((item)(regitem)))
-
-CONTRACT_END((regitem)(warmupitem)(xdcommit)(regaccount)(xvinit));
+CONTRACT_END((save)(xdcommit)(regaccount)(xvinit)(clear));
 // CONTRACT_END((regitem)(warmupitem))
